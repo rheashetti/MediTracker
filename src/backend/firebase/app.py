@@ -1,46 +1,17 @@
-import firebase_admin
-from firebase_admin import firestore, credentials
+import firebase
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import json
-
-# load_dotenv()
-# PRIVATE_KEY_ID = str(os.getenv("PRIVATE_KEY_ID")) 
-# PRIVATE_KEY = str(os.getenv("PRIVATE_KEY"))
-# CLIENT_EMAIL = str(os.getenv("CLIENT_EMAIL"))
-# CLIENT_ID = str(os.getenv("CLIENT_ID"))
-# # print(type(CLIENT_ID))
-
-# FIREBASE_JSON = {
-#     "type": "service_account",
-#     "project_id": "meditracker-5bf7d",
-#     "private_key_id": PRIVATE_KEY_ID,
-#     "private_key": PRIVATE_KEY,
-#     "client_email": CLIENT_EMAIL,
-#     "client_id": CLIENT_ID,
-#     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-#     "token_uri": "https://oauth2.googleapis.com/token",
-#     "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-#     "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40meditracker-5bf7d.iam.gserviceaccount.com",
-#     "universe_domain": "googleapis.com"
-#   }
-with open('../firebase.json', 'r') as file:
-    FIREBASE_JSON = json.load(file)
-
-cred = credentials.Certificate(FIREBASE_JSON)
-firebase_admin.initialize_app(cred)
-db = firestore.client()
-users_ref = db.collection("users")
 
 app = Flask(__name__)
 CORS(app)
+db = firebase.db
 
 @app.route("/")
 def hello():
     print("hello!")
     return "We received" + str(request.args.get("var"))
 
-@app.route("/addprofile")
+@app.route("/addprof")
 def create_profile():
     patient_name = request.args.get("patient_name")
     email = request.args.get("patient_email")
@@ -49,7 +20,7 @@ def create_profile():
     db.collection(patient_name).document("profile").set(profile)
     return f"Profile information received.\nName is {patient_name}.\nEmail is {email}.\nBirthday is {birthday}."
 
-@app.route("/adddoctor")
+@app.route("/adddoc")
 def add_doctor_info():
     patient_name = request.args.get("patient_name")
     doctor_name = request.args.get("doctor_name")
@@ -74,9 +45,13 @@ def add_medication(patient_name, medicine, frequency, dosage):
 # def delete_doctor_info():
 #     pass
 
-# @app.route("/get")
-# def get_medication():
-#     pass
+@app.route("/get")
+def get_medication():
+    patient_name = request.args.get("patient_name")
+    coll = request.args.get("coll")
+    field = request.args.get("field")
+
+    return db.collection(patient_name).document(coll).get(field)
 
 if __name__ == "__main__":
 #     hello()
