@@ -12,13 +12,15 @@ def hello():
     return "We received" + str(request.args.get("var"))
 
 @app.route("/addprof")
-def create_profile():
+def create_profile(db):
     patient_name = request.args.get("patient_name")
     email = request.args.get("patient_email")
     birthday = request.args.get("birthday")
     profile = {"email": email, "birthday": birthday}
     db.collection(patient_name).document("profile").set(profile)
-    return f"Profile information received.\nName is {patient_name}.\nEmail is {email}.\nBirthday is {birthday}."
+    return jsonify({"patient_name": patient_name,
+                    "patient_email": email,
+                    "birthday": birthday})
 
 @app.route("/adddoc")
 def add_doctor_info():
@@ -28,17 +30,22 @@ def add_doctor_info():
     phone = request.args.get("doctor_phone")
     doctor = {"name": doctor_name, "email": email, "phone": phone}
     db.collection(patient_name).document("doctor").set(doctor)
-    return f"Doctor information received.\nName is {doctor_name}.\nEmail is {email}.\nPhone is {phone}."
+    return jsonify({"doctor_name": doctor_name,
+                    "doctor_email": email,
+                    "doctor_phone": phone})
+
 
 @app.route("/addmed")
-def add_medication(patient_name, medicine, frequency, dosage):
+def add_medication():
     patient_name = request.args.get("patient_name")
     med_name  = request.args.get("med_name")
-    freqeuncy = request.args.get("frequency")
+    frequency = request.args.get("frequency")
     dosage = request.args.get("dosage")
     medicine = {"name": med_name, "frequency": frequency, "dosage": dosage}
     db.collection(patient_name).document("medicine").set(medicine)
-    return f"Medication information received.\nName is {med_name}.\nFrequency is {freqeuncy}.\Dosage is {dosage}."
+    return jsonify({"med_name": med_name,
+                    "frequency": frequency,
+                    "dosage": dosage})
 
 
 # @app.route("/delete")
