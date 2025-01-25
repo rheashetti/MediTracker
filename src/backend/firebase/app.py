@@ -12,15 +12,16 @@ def hello():
     return "We received" + str(request.args.get("var"))
 
 @app.route("/addprof")
-def create_profile(db):
+def create_profile():
     patient_name = request.args.get("patient_name")
     email = request.args.get("patient_email")
     birthday = request.args.get("birthday")
     profile = {"email": email, "birthday": birthday}
     db.collection(patient_name).document("profile").set(profile)
     return jsonify({"patient_name": patient_name,
-                    "patient_email": email,
+                     "patient_email": email,
                     "birthday": birthday})
+    # return f"Patient name is {patient_name}. Email is {email}. Birthday is {birthday}."
 
 @app.route("/adddoc")
 def add_doctor_info():
