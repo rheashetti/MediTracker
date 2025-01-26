@@ -29,6 +29,6 @@ def check_medication_incompatibilities(patient_name, new):
     return incompatibilities
 
 
-if __name__ == "__main__":
-    print(check_medication_incompatibilities('Sonic', 'valproate'))
+# if __name__ == "__main__":
+#     print(check_medication_incompatibilities('Sonic', 'valproate'))
     # print(generate(["lidocaine", 'ibuprofen', 'tylenol', 'cyclizine']))

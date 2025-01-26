@@ -1,4 +1,5 @@
 import firebase
+from firebase_admin import firestore
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -8,37 +9,42 @@ db = firebase.db
 
 @app.route("/")
 def hello():
-    # print("hello!")
-    return jsonify({"greeting": "Welcome to MediTracker!"})
+    return jsonify({"greeting": "Hi"})
+
 
 """
 Checks if the user password matches the password in the database. If it doesn't exist in the
 database, it creates one.
 """
-@app.route("/login")
+@app.route("/login", methods=['POST'])
+##TODO##
 def login():
-    patient_name = request.args.get("patient_name")
-    password_attempt = request.args.get("password")
-    login_data = db.collection(patient_name).document("login").get()
-
-    if login_data.exists:
+    data = request.get_json()
+    patient_name = data.get("patient_name")
+    password_attempt = data.get("password_attempt")
+    try:
+        login_data = db.collection(patient_name).document("login").get()
         password = login_data.to_dict().values()[0]
         if password == password_attempt:
             return jsonify({"attempt": "Log in successful!"})
         else:
             return jsonify({"attempt": "Wrong password."})
-    else:
-        db.collection(patient_name).document("login").set(password_attempt)
+        
+    except:
+        db.collection(patient_name).document("login").set({"password": password_attempt})
 
 
 """
 Gets user name, email, birthday and adds it to Firebase.
 """
-@app.route("/add/profile")
+@app.route("/add/profile", methods=['POST'])
 def create_profile():
-    patient_name = request.args.get("patient_name")
-    email = request.args.get("patient_email")
-    birthday = request.args.get("birthday")
+    print("hello!")
+    data = request.get_json()
+    print(data)
+    patient_name = data.get("patient_name")
+    email = data.get("patient_email")
+    birthday = data.get("birthday")
     profile = {"email": email, "birthday": birthday}
     db.collection(patient_name).document("profile").set(profile)
     return jsonify({"patient_name": patient_name,
@@ -48,12 +54,13 @@ def create_profile():
 """
 Gets user name, doctor's email, doctor's name, doctor's phone and adds it to Firebase.
 """
-@app.route("/add/doctor")
+@app.route("/add/doctor", methods=['POST'])
 def add_doctor_info():
-    patient_name = request.args.get("patient_name")
-    doctor_name = request.args.get("doctor_name")
-    email = request.args.get("doctor_email")
-    phone = request.args.get("doctor_phone")
+    data = request.get_json()
+    patient_name = data.get("patient_name")
+    doctor_name = data.get("doctor_name")
+    email = data.get("doctor_email")
+    phone = data.get("doctor_phone")
     doctor = {"name": doctor_name, "email": email, "phone": phone}
     db.collection(patient_name).document("doctor").set(doctor)
     return jsonify({"doctor_name": doctor_name,
@@ -65,54 +72,60 @@ def add_doctor_info():
 Gets user name, medicine name, how often medicine is taken, and dosage of medicine
 and adds it to Firebase.
 """
-@app.route("/add/medicine")
+@app.route("/add/medicine", methods=['POST'])
 def add_medication():
-    patient_name = request.args.get("patient_name")
-    med_name  = request.args.get("med_name")
+    data = request.get_json()
+    print(data)
+    patient_name = data.get("patient_name")
+    med_name  = data.get("med_name")
     #schedule is a string of a dictorary
     #schedule = {days: [], time: []}
-    schedule = request.args.get("schedule")
-    dosage = request.args.get("dosage")
+    dosage = data.get("dosage")
+    schedule = data.get("schedule")
     medicine = {med_name: [dosage, schedule]}
     db.collection(patient_name).document("medicine").set(medicine)
     return jsonify({"med_name": med_name,
                     "schedule": schedule,
                     "dosage": dosage})
 
-
-@app.route("/delete")
+###TODO###
+@app.route("/delete", methods=['DELETE'])
 def delete_info():
-    patient_name = request.args.get("patient_name")
-    coll = request.args.get("coll")
-    field = request.args.get("field")
+    data = request.get_json()
+    patient_name = data.get("patient_name")
+    coll = data.get("coll")
+    field = data.get("field")
 
-    #does not allow retrieval of password
+    #does not allow deletion of password
     if coll == "login":
-        return jsonify({field: "We cannot send this information."})
+        return jsonify({field: "We delete send this information."})
 
-    data = db.collection(patient_name).document(coll).get()
-    result = data.to_dict()[field]
+    data_ref = db.collection(patient_name).document(coll)
+    data_ref.update({field: None})
 
-    return jsonify({field: result})
+    return jsonify({field: f"Deleted {field} successfully."})
 
 
-@app.route("/get")
+@app.route("/get", methods=['GET'])
 def get_info():
-    patient_name = request.args.get("patient_name")
-    coll = request.args.get("coll")
-    field = request.args.get("field")
+    patient_name = request.get_json("patient_name")
+    coll = request.get_json("coll")
+    field = request.get_json("field")
 
     #does not allow retrieval of password
     if coll == "login":
         return jsonify({field: "We cannot send this information."})
 
     data = db.collection(patient_name).document(coll).get()
+    print(data)
     result = data.to_dict()[field]
 
     return jsonify({field: result})
+
 
 if __name__ == "__main__":
-    hello()
+    app.run(debug=True)
+    # hello()
     # add_doctor_info()
 #   name = "Sonic"
 #   create_profile(name, "sonic@hedgehog.com", "1/2/03")
