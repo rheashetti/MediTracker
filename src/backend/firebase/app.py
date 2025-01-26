@@ -8,10 +8,13 @@ db = firebase.db
 
 @app.route("/")
 def hello():
-    print("hello!")
-    return "We received" + str(request.args.get("var"))
+    # print("hello!")
+    return jsonify({"greeting": "Welcome to MediTracker!"})
 
-
+"""
+Checks if the user password matches the password in the database. If it doesn't exist in the
+database, it creates one.
+"""
 @app.route("/login")
 def login():
     patient_name = request.args.get("patient_name")
@@ -19,7 +22,7 @@ def login():
     login_data = db.collection(patient_name).document("login").get()
 
     if login_data.exists:
-        password = login_data.to_dict().keys()
+        password = login_data.to_dict().values()[0]
         if password == password_attempt:
             return jsonify({"attempt": "Log in successful!"})
         else:
@@ -31,7 +34,7 @@ def login():
 """
 Gets user name, email, birthday and adds it to Firebase.
 """
-@app.route("/addprof")
+@app.route("/add/profile")
 def create_profile():
     patient_name = request.args.get("patient_name")
     email = request.args.get("patient_email")
@@ -41,12 +44,11 @@ def create_profile():
     return jsonify({"patient_name": patient_name,
                     "patient_email": email,
                     "birthday": birthday})
-    # return f"Patient name is {patient_name}. Email is {email}. Birthday is {birthday}."
 
 """
 Gets user name, doctor's email, doctor's name, doctor's phone and adds it to Firebase.
 """
-@app.route("/adddoc")
+@app.route("/add/doctor")
 def add_doctor_info():
     patient_name = request.args.get("patient_name")
     doctor_name = request.args.get("doctor_name")
@@ -63,7 +65,7 @@ def add_doctor_info():
 Gets user name, medicine name, how often medicine is taken, and dosage of medicine
 and adds it to Firebase.
 """
-@app.route("/addmed")
+@app.route("/add/medicine")
 def add_medication():
     patient_name = request.args.get("patient_name")
     med_name  = request.args.get("med_name")
@@ -71,28 +73,47 @@ def add_medication():
     #schedule = {days: [], time: []}
     schedule = request.args.get("schedule")
     dosage = request.args.get("dosage")
-    medicine = {"name": med_name, "frequency": schedule, "dosage": dosage}
+    medicine = {med_name: [dosage, schedule]}
     db.collection(patient_name).document("medicine").set(medicine)
     return jsonify({"med_name": med_name,
                     "schedule": schedule,
                     "dosage": dosage})
 
 
-# @app.route("/delete")
-# def delete_doctor_info():
-#     pass
-
-@app.route("/get")
-def get_medication():#
+@app.route("/delete")
+def delete_info():
     patient_name = request.args.get("patient_name")
     coll = request.args.get("coll")
     field = request.args.get("field")
 
-    return db.collection(patient_name).document(coll).get()
+    #does not allow retrieval of password
+    if coll == "login":
+        return jsonify({field: "We cannot send this information."})
+
+    data = db.collection(patient_name).document(coll).get()
+    result = data.to_dict()[field]
+
+    return jsonify({field: result})
+
+
+@app.route("/get")
+def get_info():
+    patient_name = request.args.get("patient_name")
+    coll = request.args.get("coll")
+    field = request.args.get("field")
+
+    #does not allow retrieval of password
+    if coll == "login":
+        return jsonify({field: "We cannot send this information."})
+
+    data = db.collection(patient_name).document(coll).get()
+    result = data.to_dict()[field]
+
+    return jsonify({field: result})
 
 if __name__ == "__main__":
-#     hello()
-    add_doctor_info()
+    hello()
+    # add_doctor_info()
 #   name = "Sonic"
 #   create_profile(name, "sonic@hedgehog.com", "1/2/03")
 #   add_doctor_info(name, "eggman", "eggman@bot.com", "123-456-7890")
