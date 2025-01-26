@@ -1,4 +1,6 @@
 import firebase
+from datetime import datetime
+import ast
 from firebase_admin import firestore
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -9,7 +11,7 @@ db = firebase.db
 
 @app.route("/")
 def hello():
-    return jsonify({"greeting": "Hi"})
+    return jsonify({"greeting": "Welcome to MediTracker!"})
 
 
 """
@@ -32,6 +34,10 @@ def login():
         
     except:
         db.collection(patient_name).document("login").set({"password": password_attempt})
+
+
+
+"""--------------------------------ADD FUNCTIONS---------------------------------------"""
 
 
 """
@@ -67,7 +73,6 @@ def add_doctor_info():
                     "doctor_email": email,
                     "doctor_phone": phone})
 
-
 """
 Gets user name, medicine name, how often medicine is taken, and dosage of medicine
 and adds it to Firebase.
@@ -83,10 +88,19 @@ def add_medication():
     dosage = data.get("dosage")
     schedule = data.get("schedule")
     medicine = {med_name: [dosage, schedule]}
-    db.collection(patient_name).document("medicine").set(medicine)
+    if db.collection(patient_name).document("medicine").get().exists:
+        doc_ref = db.collection(patient_name).document("medicine")
+        doc_ref.update(medicine)
+    else:
+        db.collection(patient_name).document("medicine").set(medicine)
     return jsonify({"med_name": med_name,
                     "schedule": schedule,
                     "dosage": dosage})
+
+
+
+"""--------------------------DELETE FUNCTION-------------------------------"""
+
 
 ###TODO###
 @app.route("/delete", methods=['DELETE'])
@@ -106,21 +120,67 @@ def delete_info():
     return jsonify({field: f"Deleted {field} successfully."})
 
 
-@app.route("/get", methods=['GET'])
+
+"""--------------------------------GET FUNCTIONS----------------------------------"""
+
+
+
+@app.route("/get/info", methods=['GET'])
 def get_info():
-    patient_name = request.get_json("patient_name")
-    coll = request.get_json("coll")
-    field = request.get_json("field")
+    data = request.get_json()
+    patient_name = data.get("patient_name")
+    coll = data.get("coll")
+    field = data.get("field")
 
     #does not allow retrieval of password
     if coll == "login":
         return jsonify({field: "We cannot send this information."})
 
     data = db.collection(patient_name).document(coll).get()
-    print(data)
     result = data.to_dict()[field]
 
     return jsonify({field: result})
+
+@app.route("/get/schedule", methods=['GET'])
+def retrieve_schedule():
+    # print("hi")
+    data = request.get_json()
+    name = data.get("patient_name")
+    # return jsonify({"name": name})
+    # initialize all necessary data structures and variables
+    schedule = {}
+    weekdays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+    year = str(datetime.now().year)
+    month = str(datetime.now().month)
+    curr_date = str(datetime.now().day)
+    curr_day = str(datetime.now().weekday())
+    db = firebase.db
+
+    # pull information about all the medicines from the database
+    medicine_dict = db.collection(name).document("medicine").get().to_dict()
+    print(medicine_dict)
+
+    # sort all of the information into a dictionary with dates as the keys which are linked to a list of dictionaries that have information about what medicine to take and when
+    for key, value in medicine_dict.items():
+        counter = 0
+        # converts all of the days for each medicine into indexes from 0-6 representing monday-sunday respectively
+        day_idxs = [weekdays.index(day) for day in ast.literal_eval(value[1])['days']]
+        # all of the times that are linked to each medicine in list form
+        time = ast.literal_eval(value[1])['time']
+        for idx in day_idxs:
+            # calculates the number of days away so it can be used for final date calculations
+            if idx < int(curr_day):
+                days_until = str(7 - int(curr_day) + idx)
+            else:
+                days_until = str(idx - int(curr_day))
+
+            # adds the medicine and time to take it to the schedule
+            if (year + "-" + month + "-" + curr_date + days_until) in schedule.keys():
+                schedule[year + "-" + month + "-" + curr_date + days_until] += {'title':key, 'description': time[counter]}
+            else:
+                schedule[year + "-" + month + "-" + curr_date + days_until] = [{'title':key, 'description': time[counter]}]
+            counter += 1
+    return jsonify(schedule)
 
 
 if __name__ == "__main__":

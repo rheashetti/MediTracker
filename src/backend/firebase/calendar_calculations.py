@@ -26,6 +26,7 @@ class calendar:
                     self.dates.append(curr_date + days_until)
             time = ast.literal_eval(value[1])['time']
             self.schedule.append({key:[self.dates, time]})
+#         print(self.schedule)
     
 # cal = calendar()
 # cal.retrieve_schedule('Sonic')
