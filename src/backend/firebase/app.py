@@ -1,6 +1,9 @@
 import firebase
 from datetime import datetime
 import ast
+import os
+from dotenv import load_dotenv
+import google.generativeai as genai
 from firebase_admin import firestore
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -150,36 +153,45 @@ def retrieve_schedule():
     # initialize all necessary data structures and variables
     schedule = {}
     weekdays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-    year = str(datetime.now().year)
-    month = str(datetime.now().month)
-    curr_date = str(datetime.now().day)
-    curr_day = str(datetime.now().weekday())
+    year = datetime.now().year
+    month = datetime.now().month
+    curr_date = datetime.now().day
+    curr_day = datetime.now().weekday()
     db = firebase.db
 
     # pull information about all the medicines from the database
     medicine_dict = db.collection(name).document("medicine").get().to_dict()
-    print(medicine_dict)
+
+    # start up a gemini ai model
+    load_dotenv()
+    gemini_key = os.getenv("GENAI_KEY")
+    genai.configure(api_key=gemini_key)
+    model = genai.GenerativeModel("gemini-1.5-flash")
 
     # sort all of the information into a dictionary with dates as the keys which are linked to a list of dictionaries that have information about what medicine to take and when
     for key, value in medicine_dict.items():
-        counter = 0
+        # generate a short description of the drug
+        response = model.generate_content(f'Generate a short description of what {key} is used for.')
+        description = response.text
+
         # converts all of the days for each medicine into indexes from 0-6 representing monday-sunday respectively
         day_idxs = [weekdays.index(day) for day in ast.literal_eval(value[1])['days']]
         # all of the times that are linked to each medicine in list form
         time = ast.literal_eval(value[1])['time']
+
         for idx in day_idxs:
             # calculates the number of days away so it can be used for final date calculations
-            if idx < int(curr_day):
-                days_until = str(7 - int(curr_day) + idx)
+            if idx < curr_day:
+                days_until = 7 - curr_day + idx
             else:
-                days_until = str(idx - int(curr_day))
+                days_until = idx - curr_day
 
-            # adds the medicine and time to take it to the schedule
-            if (year + "-" + month + "-" + curr_date + days_until) in schedule.keys():
-                schedule[year + "-" + month + "-" + curr_date + days_until] += {'title':key, 'description': time[counter]}
+            # adds the medicine and time to the schedule
+            if (str(year) + "-" + str(month) + "-" + str(curr_date + days_until)) in schedule.keys():
+                schedule[str(year) + "-" + str(month) + "-" + str(curr_date + days_until)] += {'medicine':key, 'time': time}
             else:
-                schedule[year + "-" + month + "-" + curr_date + days_until] = [{'title':key, 'description': time[counter]}]
-            counter += 1
+                schedule[str(year) + "-" + str(month) + "-" + str(curr_date + days_until)] = [{'medicine':key, 'time': time, 'description': description}]
+    
     return jsonify(schedule)
 
 
