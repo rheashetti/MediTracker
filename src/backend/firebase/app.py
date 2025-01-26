@@ -48,9 +48,7 @@ Gets user name, email, birthday and adds it to Firebase.
 """
 @app.route("/add/profile", methods=['POST'])
 def create_profile():
-    print("hello!")
     data = request.get_json()
-    print(data)
     patient_name = data.get("patient_name")
     email = data.get("patient_email")
     birthday = data.get("birthday")
@@ -83,7 +81,6 @@ and adds it to Firebase.
 @app.route("/add/medicine", methods=['POST'])
 def add_medication():
     data = request.get_json()
-    print(data)
     patient_name = data.get("patient_name")
     med_name  = data.get("med_name")
     #schedule is a string of a dictorary
@@ -146,10 +143,8 @@ def get_info():
 
 @app.route("/get/schedule", methods=['GET'])
 def retrieve_schedule():
-    # print("hi")
     data = request.get_json()
     name = data.get("patient_name")
-    # return jsonify({"name": name})
     # initialize all necessary data structures and variables
     schedule = {}
     weekdays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
