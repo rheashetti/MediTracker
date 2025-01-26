@@ -88,7 +88,11 @@ def add_medication():
     dosage = data.get("dosage")
     schedule = data.get("schedule")
     medicine = {med_name: [dosage, schedule]}
-    db.collection(patient_name).document("medicine").set(medicine)
+    if db.collection(patient_name).document("medicine").get().exists:
+        doc_ref = db.collection(patient_name).document("medicine")
+        doc_ref.update(medicine)
+    else:
+        db.collection(patient_name).document("medicine").set(medicine)
     return jsonify({"med_name": med_name,
                     "schedule": schedule,
                     "dosage": dosage})
@@ -139,20 +143,22 @@ def get_info():
 
 @app.route("/get/schedule", methods=['GET'])
 def retrieve_schedule():
+    # print("hi")
     data = request.get_json()
     name = data.get("patient_name")
-
+    # return jsonify({"name": name})
     # initialize all necessary data structures and variables
     schedule = {}
     weekdays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-    year = datetime.now().year
-    month = datetime.now().month
-    curr_date = datetime.now().day
-    curr_day = datetime.now().weekday()
+    year = str(datetime.now().year)
+    month = str(datetime.now().month)
+    curr_date = str(datetime.now().day)
+    curr_day = str(datetime.now().weekday())
     db = firebase.db
 
     # pull information about all the medicines from the database
     medicine_dict = db.collection(name).document("medicine").get().to_dict()
+    print(medicine_dict)
 
     # sort all of the information into a dictionary with dates as the keys which are linked to a list of dictionaries that have information about what medicine to take and when
     for key, value in medicine_dict.items():
@@ -160,16 +166,16 @@ def retrieve_schedule():
         # converts all of the days for each medicine into indexes from 0-6 representing monday-sunday respectively
         day_idxs = [weekdays.index(day) for day in ast.literal_eval(value[1])['days']]
         # all of the times that are linked to each medicine in list form
-        time = ast.literal_eval(value[1])['time'].split(',')
+        time = ast.literal_eval(value[1])['time']
         for idx in day_idxs:
             # calculates the number of days away so it can be used for final date calculations
-            if idx < curr_day:
-                days_until = 7 - curr_day + idx
+            if idx < int(curr_day):
+                days_until = str(7 - int(curr_day) + idx)
             else:
-                days_until = idx - curr_day
+                days_until = str(idx - int(curr_day))
 
             # adds the medicine and time to take it to the schedule
-            if (year + "-" + month + "-" + curr_date + days_until) in schedule.keys:
+            if (year + "-" + month + "-" + curr_date + days_until) in schedule.keys():
                 schedule[year + "-" + month + "-" + curr_date + days_until] += {'title':key, 'description': time[counter]}
             else:
                 schedule[year + "-" + month + "-" + curr_date + days_until] = [{'title':key, 'description': time[counter]}]
